@@ -1,105 +1,17 @@
 'use client'
 import React, { useState } from 'react'
-import { ArrowLeft, MoreVertical } from 'lucide-react'
+import { ArrowLeft, MoreVertical, LayoutDashboard, Coffee } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 
-
 const products = [
-  {
-    id: 1,
-    name: "Batch Arabica Kintamani #A1",
-    origin: "Kintamani, Bali",
-    process: "Natural",
-    notes: "Fruity, Citrus, Caramel",
-    priceEth: 0.015,
-    quantity: 120,
-    timeline: {
-      harvested: "2024-07-12",
-      roasted: "2024-07-20",
-      packed: "2024-07-22",
-    },
-    image: "https://source.unsplash.com/200x200/?coffee,beans"
-  },
-  {
-    id: 2,
-    name: "Batch Robusta Temanggung #R7",
-    origin: "Temanggung, Central Java",
-    process: "Washed",
-    notes: "Bold, Nutty, Dark Chocolate",
-    priceEth: 0.010,
-    quantity: 200,
-    timeline: {
-      harvested: "2024-08-01",
-      roasted: "2024-08-05",
-      packed: "2024-08-06",
-    },
-    image: "https://source.unsplash.com/200x200/?coffee,robusta"
-  },
-  {
-    id: 3,
-    name: "Batch Liberica Jambi #L3",
-    origin: "Jambi, Sumatra",
-    process: "Honey Process",
-    notes: "Floral, Herbal, Sweet Finish",
-    priceEth: 0.022,
-    quantity: 90,
-    timeline: {
-      harvested: "2024-06-18",
-      roasted: "2024-06-26",
-      packed: "2024-06-27",
-    },
-    image: "https://source.unsplash.com/200x200/?coffee,liberica"
-  },
-  {
-    id: 4,
-    name: "Batch Excelsa Sulawesi #EX9",
-    origin: "South Sulawesi",
-    process: "Natural",
-    notes: "Tropical Fruit, Complex, Vibrant Acidity",
-    priceEth: 0.018,
-    quantity: 150,
-    timeline: {
-      harvested: "2024-09-02",
-      roasted: "2024-09-10",
-      packed: "2024-09-11",
-    },
-    image: "https://source.unsplash.com/200x200/?coffee,excelsa"
-  },
-  {
-    id: 5,
-    name: "Batch Blend Nusantara #B2",
-    origin: "Sumatra • Bali • Sulawesi",
-    process: "Mixed Process",
-    notes: "Balanced, Smooth, Slight Spice",
-    priceEth: 0.013,
-    quantity: 300,
-    timeline: {
-      harvested: "2024-05-14",
-      roasted: "2024-05-22",
-      packed: "2024-05-23",
-    },
-    image: "https://source.unsplash.com/200x200/?coffee,blend"
-  },
-  {
-    id: 6,
-    name: "Batch Geisha Papua #G5",
-    origin: "Wamena, Papua",
-    process: "Washed",
-    notes: "Tea-like, Floral, Bergamot, Clean Cup",
-    priceEth: 0.045,
-    quantity: 60,
-    timeline: {
-      harvested: "2024-04-03",
-      roasted: "2024-04-11",
-      packed: "2024-04-12",
-    },
-    image: "https://source.unsplash.com/200x200/?coffee,geisha"
-  },
+  { id: 1, name: "Batch Arabica Kintamani #A1", origin: "Kintamani, Bali", process: "Natural", notes: "Fruity, Citrus, Caramel", priceEth: 0.015, quantity: 120, timeline: { harvested: "2024-07-12", roasted: "2024-07-20", packed: "2024-07-22" }, image: "https://source.unsplash.com/200x200/?coffee,beans" },
+  { id: 2, name: "Batch Robusta Temanggung #R7", origin: "Temanggung, Central Java", process: "Washed", notes: "Bold, Nutty, Dark Chocolate", priceEth: 0.010, quantity: 200, timeline: { harvested: "2024-08-01", roasted: "2024-08-05", packed: "2024-08-06" }, image: "https://source.unsplash.com/200x200/?coffee,robusta" },
+  { id: 3, name: "Batch Liberica Jambi #L3", origin: "Jambi, Sumatra", process: "Honey Process", notes: "Floral, Herbal, Sweet Finish", priceEth: 0.022, quantity: 90, timeline: { harvested: "2024-06-18", roasted: "2024-06-26", packed: "2024-06-27" }, image: "https://source.unsplash.com/200x200/?coffee,liberica" },
+  { id: 4, name: "Batch Excelsa Sulawesi #EX9", origin: "South Sulawesi", process: "Natural", notes: "Tropical Fruit, Complex, Vibrant Acidity", priceEth: 0.018, quantity: 150, timeline: { harvested: "2024-09-02", roasted: "2024-09-10", packed: "2024-09-11" }, image: "https://source.unsplash.com/200x200/?coffee,excelsa" },
+  { id: 5, name: "Batch Blend Nusantara #B2", origin: "Sumatra • Bali • Sulawesi", process: "Mixed Process", notes: "Balanced, Smooth, Slight Spice", priceEth: 0.013, quantity: 300, timeline: { harvested: "2024-05-14", roasted: "2024-05-22", packed: "2024-05-23" }, image: "https://source.unsplash.com/200x200/?coffee,blend" },
+  { id: 6, name: "Batch Geisha Papua #G5", origin: "Wamena, Papua", process: "Washed", notes: "Tea-like, Floral, Bergamot, Clean Cup", priceEth: 0.045, quantity: 60, timeline: { harvested: "2024-04-03", roasted: "2024-04-11", packed: "2024-04-12" }, image: "https://source.unsplash.com/200x200/?coffee,geisha" },
 ]
-
-
-
 
 const DashboardFarmer = () => {
   const [search, setSearch] = useState('')
@@ -113,7 +25,7 @@ const DashboardFarmer = () => {
   return (
     <div className="p-4 max-w-5xl mx-auto flex flex-col gap-6">
       {/* Top Bar */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <button
           onClick={() => router.push('/')}
           className="flex items-center gap-2 p-2 border border-gray-300 rounded-xl hover:bg-gray-100"
@@ -122,12 +34,23 @@ const DashboardFarmer = () => {
           <span className="cursor-pointer text-sm font-medium">Kembali</span>
         </button>
 
-        <button
-          onClick={() => router.push('/farmer/minting')}
-          className="cursor-pointer px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700"
-        >
-          Mint New Coffee
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => router.push('/farmer/minting')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-700 cursor-pointer"
+          >
+            <Coffee size={16} />
+            Mint New Coffee
+          </button>
+
+          <button
+            onClick={() => router.push('/farmer/dashboard')}
+            className="flex items-center gap-2 px-4 py-2 text-black border border-gray-300 rounded-lg hover:bg-gray-300 cursor-pointer"
+          >
+            <LayoutDashboard size={16} />
+            Dashboard
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
