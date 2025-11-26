@@ -9,10 +9,16 @@ export async function POST(req: NextRequest) {
     const file: File | null = data.get("file") as unknown as File;
     if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
+    // upload ke pinata
     const result = await pinata.upload.public.file(file);
+
+    // optional: gateway URL kalau mau preview
     const url = await pinata.gateways.public.convert(result.cid);
 
-    return NextResponse.json({ url }, { status: 200 });
+    return NextResponse.json(
+      { cid: result.cid, url },
+      { status: 200 }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
