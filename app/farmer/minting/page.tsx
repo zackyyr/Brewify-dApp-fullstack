@@ -23,6 +23,7 @@ export default function MintingNFT() {
   // Mint result state
   const [tokenId, setTokenId] = useState<number | null>(null);
   const [productSlug, setProductSlug] = useState<string | null>(null);
+  const [metadataCid, setMetadataCid] = useState<string | null>(null);
   const [readonly, setReadonly] = useState(false);
 
   const [form, setForm] = useState({
@@ -37,15 +38,11 @@ export default function MintingNFT() {
     packed: "",
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setFile(e.target.files?.[0]);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => setFile(e.target.files?.[0]);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const showToast = (message: string, type: "success" | "error" = "error") =>
-    setToast({ message, type });
+  const showToast = (message: string, type: "success" | "error" = "error") => setToast({ message, type });
 
   const downloadQR = () => {
     const canvas = document.getElementById("qr") as HTMLCanvasElement | null;
@@ -58,11 +55,8 @@ export default function MintingNFT() {
   };
 
   const handleMint = async () => {
-    // Validasi required fields
     const required = ["name","origin","process","description","priceEth","quantity","harvested","roasted","packed"];
-    for (const f of required) {
-      if (!form[f as keyof typeof form]) return showToast(`Field "${f}" wajib diisi!`);
-    }
+    for (const f of required) if (!form[f as keyof typeof form]) return showToast(`Field "${f}" wajib diisi!`);
     if (!file) return showToast("Select a file first!");
     if (!CONTRACT_ADDRESS) return showToast("Contract address missing");
 
@@ -85,10 +79,10 @@ export default function MintingNFT() {
       });
       const metaData = await metaRes.json();
       if (!metaData?.cid) throw new Error("Metadata upload failed");
-      const metadataCid = metaData.cid;
-      const metadataUri = `ipfs://${metadataCid}`;
+      setMetadataCid(metaData.cid); // save untuk reveal
+      const metadataUri = `ipfs://${metaData.cid}`;
 
-      // 3) Mint NFT ke blockchain
+      // 3) Mint NFT
       if (!window.ethereum) throw new Error("Install MetaMask");
       const provider = new ethers.BrowserProvider(window.ethereum as any);
       const signer = await provider.getSigner();
@@ -112,7 +106,7 @@ export default function MintingNFT() {
       if (extractedTokenId === null) throw new Error("BatchMinted event not found");
       setTokenId(extractedTokenId);
 
-      // 4) Simpan ke DB via API
+      // 4) Save to DB
       const slug = form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       const resProduct = await fetch("/api/product", {
         method: "POST",
@@ -122,8 +116,9 @@ export default function MintingNFT() {
           owner: addr,
           name: form.name,
           slug,
-          metadataCid,               // HARUS ini, jangan ipfsHash
-          image: `ipfs://${imageCid}`,
+          metadataCid: metaData.cid,
+          imageCid: imageCid, 
+          description: form.description,
           quantity: Number(form.quantity),
           priceEth: form.priceEth,
           origin: form.origin,
@@ -132,12 +127,10 @@ export default function MintingNFT() {
           roasted: form.roasted,
           packed: form.packed,
         }),
-      }).then((r) => r.json());
+      }).then(r => r.json());
 
-      // SAFE access supaya nggak crash
       setProductSlug(resProduct?.product?.slug ?? slug);
       setReadonly(true);
-
       showToast("Mint sukses!", "success");
     } catch (err) {
       showToast("Minting gagal: " + (err as Error).message, "error");
@@ -165,35 +158,27 @@ export default function MintingNFT() {
         <div className="border border-gray-300 rounded-xl p-6 flex-1 flex flex-col gap-4">
           <h1 className="text-2xl font-bold text-center">Mint New Batch NFT</h1>
 
-          {/* Regular Inputs */}
-          <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Batch Name"
-            className="p-3 rounded-xl border border-gray-300 w-full"
-          />
-          <input
-            name="origin"
-            value={form.origin}
-            onChange={handleChange}
-            placeholder="Origin"
-            className="p-3 rounded-xl border border-gray-300 w-full"
-          />
-          <input
-            name="process"
-            value={form.process}
-            onChange={handleChange}
-            placeholder="Process"
-            className="p-3 rounded-xl border border-gray-300 w-full"
-          />
+          {["name","origin","process"].map(f => (
+            <input
+              key={f}
+              name={f}
+              value={form[f as keyof typeof form]}
+              onChange={handleChange}
+              placeholder={f.charAt(0).toUpperCase() + f.slice(1)}
+              className="p-3 rounded-xl border border-gray-300 w-full"
+              readOnly={readonly}
+            />
+          ))}
+
           <textarea
             name="description"
             value={form.description}
             onChange={handleChange}
             placeholder="Description"
             className="p-3 rounded-xl border border-gray-300 w-full"
+            readOnly={readonly}
           />
+
           <input
             type="number"
             name="priceEth"
@@ -201,6 +186,7 @@ export default function MintingNFT() {
             onChange={handleChange}
             placeholder="Price (ETH)"
             className="p-3 rounded-xl border border-gray-300 w-full"
+            readOnly={readonly}
           />
           <input
             type="number"
@@ -209,44 +195,36 @@ export default function MintingNFT() {
             onChange={handleChange}
             placeholder="Quantity"
             className="p-3 rounded-xl border border-gray-300 w-full"
+            readOnly={readonly}
           />
 
           {/* Timeline */}
           <div className="flex flex-col gap-2 w-full">
             <label className="font-medium text-gray-700">Timeline</label>
             <div className="flex gap-2">
-              <input
-                type="date"
-                name="harvested"
-                value={form.harvested}
-                onChange={handleChange}
-                className="p-3 rounded-xl border border-gray-300 flex-1"
-              />
-              <input
-                type="date"
-                name="roasted"
-                value={form.roasted}
-                onChange={handleChange}
-                className="p-3 rounded-xl border border-gray-300 flex-1"
-              />
-              <input
-                type="date"
-                name="packed"
-                value={form.packed}
-                onChange={handleChange}
-                className="p-3 rounded-xl border border-gray-300 flex-1"
-              />
+              {["harvested","roasted","packed"].map(f => (
+                <input
+                  key={f}
+                  type="date"
+                  name={f}
+                  value={form[f as keyof typeof form]}
+                  onChange={handleChange}
+                  className="p-3 rounded-xl border border-gray-300 flex-1"
+                  readOnly={readonly}
+                />
+              ))}
             </div>
           </div>
 
           <button
             onClick={handleMint}
-            disabled={minting}
-            className={`w-full py-3 rounded-xl font-semibold text-white ${minting ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+            disabled={minting || readonly}
+            className={`w-full py-3 rounded-xl font-semibold text-white ${minting || readonly ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
           >
             {minting ? "Minting..." : "Mint Batch NFT"}
           </button>
         </div>
+
         {/* RIGHT PREVIEW */}
         <div className="flex-1 flex flex-col items-center gap-4">
           {file ? (
@@ -260,21 +238,26 @@ export default function MintingNFT() {
           <label className="w-full cursor-pointer flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-lg p-3 hover:border-gray-400">
             <Upload size={24} />
             <span>{file ? file.name : "Choose file"}</span>
-            <input type="file" onChange={handleFileChange} className="hidden" />
+            <input type="file" onChange={handleFileChange} className="hidden" disabled={readonly} />
           </label>
 
-          {/* QR */}
-          <div className="w-full h-64 border border-gray-200 rounded-lg flex items-center justify-center">
+          {/* QR & IPFS */}
+          <div className="w-full h-64 border border-gray-200 rounded-lg flex flex-col items-center justify-center p-2 gap-2">
             {productSlug ? (
-              <div className="flex flex-col items-center">
+              <>
                 <QRCodeCanvas id="qr" value={`${HOST}/product/${productSlug}`} size={150} />
                 <button
                   onClick={downloadQR}
-                  className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer transition"
+                  className="mt-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 cursor-pointer transition"
                 >
                   Download QR
                 </button>
-              </div>
+                {metadataCid && (
+                  <span className="text-sm text-gray-600 break-all mt-2">
+                    IPFS: {metadataCid}
+                  </span>
+                )}
+              </>
             ) : (
               <span className="text-gray-400">QR akan muncul setelah mint</span>
             )}
