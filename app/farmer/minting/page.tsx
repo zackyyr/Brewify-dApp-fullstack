@@ -198,23 +198,46 @@ export default function MintingNFT() {
             readOnly={readonly}
           />
 
-          {/* Timeline */}
-          <div className="flex flex-col gap-2 w-full">
-            <label className="font-medium text-gray-700">Timeline</label>
-            <div className="flex gap-2">
-              {["harvested","roasted","packed"].map(f => (
-                <input
-                  key={f}
-                  type="date"
-                  name={f}
-                  value={form[f as keyof typeof form]}
-                  onChange={handleChange}
-                  className="p-3 rounded-xl border border-gray-300 flex-1"
-                  readOnly={readonly}
-                />
-              ))}
+        {/* Timeline */}
+        <div className="flex flex-col gap-2 w-full">
+          <label className="font-medium text-gray-700">Timeline</label>
+          <div className="flex gap-2">
+            <div className="flex flex-col flex-1">
+              <label className="text-sm text-gray-500">Harvested</label>
+              <input
+                type="date"
+                name="harvested"
+                value={form.harvested}
+                onChange={handleChange}
+                className="p-3 rounded-xl border border-gray-300 w-full"
+                readOnly={readonly}
+              />
+            </div>
+            <div className="flex flex-col flex-1">
+              <label className="text-sm text-gray-500">Roasted</label>
+              <input
+                type="date"
+                name="roasted"
+                value={form.roasted}
+                onChange={handleChange}
+                className="p-3 rounded-xl border border-gray-300 w-full"
+                readOnly={readonly}
+              />
+            </div>
+            <div className="flex flex-col flex-1">
+              <label className="text-sm text-gray-500">Packed</label>
+              <input
+                type="date"
+                name="packed"
+                value={form.packed}
+                onChange={handleChange}
+                className="p-3 rounded-xl border border-gray-300 w-full"
+                readOnly={readonly}
+              />
             </div>
           </div>
+        </div>
+
 
           <button
             onClick={handleMint}

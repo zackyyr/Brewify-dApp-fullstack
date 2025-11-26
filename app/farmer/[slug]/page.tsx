@@ -139,17 +139,36 @@ export default function EditProductPage() {
           <div className="flex flex-col gap-2 w-full">
             <label className="font-medium text-gray-700">Timeline</label>
             <div className="flex gap-2">
-              {["harvested","roasted","packed"].map(f => (
+              <div className="flex flex-col flex-1">
+                <label className="text-sm text-gray-500">Harvested</label>
                 <input
-                  key={f}
                   type="date"
-                  value={product[f as keyof Product] as string}
+                  value={product.harvested}
                   readOnly
-                  className="p-3 rounded-xl border border-gray-300 flex-1 bg-gray-100 text-gray-600"
+                  className="p-3 rounded-xl border border-gray-300 w-full bg-gray-100 text-gray-600"
                 />
-              ))}
+              </div>
+              <div className="flex flex-col flex-1">
+                <label className="text-sm text-gray-500">Roasted</label>
+                <input
+                  type="date"
+                  value={product.roasted}
+                  readOnly
+                  className="p-3 rounded-xl border border-gray-300 w-full bg-gray-100 text-gray-600"
+                />
+              </div>
+              <div className="flex flex-col flex-1">
+                <label className="text-sm text-gray-500">Packed</label>
+                <input
+                  type="date"
+                  value={product.packed}
+                  readOnly
+                  className="p-3 rounded-xl border border-gray-300 w-full bg-gray-100 text-gray-600"
+                />
+              </div>
             </div>
           </div>
+
 
           <button
             onClick={handleUpdateQuantity}

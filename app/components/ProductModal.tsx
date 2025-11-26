@@ -1,81 +1,153 @@
 'use client'
-import React, { useState } from "react"
+
+import React, { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { BrowserProvider, parseEther } from "ethers"
+import { BrowserProvider, Contract, parseEther } from "ethers"
 import Toast from "./Toast"
+import BatchNFTAbi from "@/build/contracts/BatchNFT.json"
+
+interface Timeline {
+  harvested?: string
+  roasted?: string
+  packed?: string
+}
+
+interface Product {
+  tokenId: number
+  name: string
+  origin?: string
+  process?: string
+  description?: string
+  priceEth?: number | string
+  imageCid?: string
+  timeline?: Timeline
+  recipientAddress?: string
+}
 
 interface ProductModalProps {
   open: boolean
   onClose: () => void
-  product: any | null
+  product: Product | null
 }
 
+const BATCHNFT_ADDRESS = process.env.NEXT_PUBLIC_BATCHNFT_ADDRESS!
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL!
+const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "gateway.pinata.cloud"
+
 const ProductModal: React.FC<ProductModalProps> = ({ open, onClose, product }) => {
+  const [fullProduct, setFullProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState<any | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
-  if (!open || !product) return null
+  useEffect(() => {
+    if (!product) return
 
-const handleBuy = async () => {
-  if (!window.ethereum) {
-    setToast({ message: "Wallet not detected.", type: "error" })
-    return
-  }
+    const fetchData = async () => {
+      try {
+        const provider = (window.ethereum)
+          ? new BrowserProvider(window.ethereum as any)
+          : new BrowserProvider(RPC_URL)
 
-  if (!product?.priceEth || Number(product.priceEth) <= 0) {
-    setToast({ message: "Invalid product price.", type: "error" })
-    return
-  }
+        const contract = new Contract(BATCHNFT_ADDRESS, BatchNFTAbi.abi, provider)
 
-  try {
-    setLoading(true)
+        // Ambil owner
+        const owner = await contract.ownerOf(product.tokenId)
 
-    const provider = new BrowserProvider(window.ethereum)
-    const signer = await provider.getSigner()
+        // Ambil IPFS hash metadata
+        let ipfsHash: string = await contract.batchMetadata(product.tokenId)
+        ipfsHash = ipfsHash.replace(/^ipfs:\/\//, "") // remove ipfs:// prefix
 
-    // Validate address (biar ga asal to)
-    const recipient = "0xdF4651D302A5c0Fbe79851db4BFa709db7e7b3F1"
-    if (!recipient || !recipient.startsWith("0x") || recipient.length !== 42) {
-      setToast({ message: "Invalid contract address.", type: "error" })
-      setLoading(false)
+        const res = await fetch(`https://${GATEWAY_URL}/ipfs/${ipfsHash}`)
+        const text = await res.text()
+
+        let metadata: any
+        try {
+          metadata = JSON.parse(text)
+          console.log("Metadata:", metadata)
+        } catch (err) {
+          console.error("Invalid JSON from IPFS:", text)
+          throw err
+        }
+
+        // Parse timeline dari attributes
+        const timeline: Timeline = {}
+        metadata.attributes?.forEach((attr: any) => {
+          if (attr.trait_type === "Harvested") timeline.harvested = attr.value
+          if (attr.trait_type === "Roasted")  timeline.roasted  = attr.value
+          if (attr.trait_type === "Packed")   timeline.packed   = attr.value
+        })
+
+        const origin = metadata.attributes?.find((a:any)=>a.trait_type==="Origin")?.value
+        const process = metadata.attributes?.find((a:any)=>a.trait_type==="Process")?.value
+
+        const imageCid = metadata.image?.replace("ipfs://","")
+
+        setFullProduct({
+          ...product,
+          recipientAddress: owner,
+          name: metadata.name ?? product.name,
+          origin,
+          process,
+          description: metadata.description ?? product.description,
+          imageCid,
+          timeline
+        })
+      } catch (err) {
+        console.error("Failed to fetch product data:", err)
+        setFullProduct(product)
+      }
+    }
+
+    fetchData()
+  }, [product])
+
+  if (!open || !fullProduct) return null
+
+  const handleBuy = async () => {
+    if (!window.ethereum) {
+      setToast({ message: "Wallet not detected.", type: "error" })
       return
     }
 
-    // Attempt TX
-    const tx = await signer.sendTransaction({
-      to: recipient,
-      value: parseEther(String(product.priceEth))
-    })
-
-    await tx.wait()
-
-    setToast({ message: "Transaction completed successfully.", type: "success" })
-
-  } catch (err: any) {
-    console.log("TX ERROR:", err)
-
-    // User cancel
-    if (err?.code === 4001) {
-      setToast({ message: "Transaction was cancelled.", type: "error" })
-    }
-    // Low balance
-    else if (err?.message?.toLowerCase().includes("insufficient")) {
-      setToast({ message: "Insufficient balance.", type: "error" })
-    }
-    // RPC or network error
-    else if (err?.message?.toLowerCase().includes("network")) {
-      setToast({ message: "Network error. Try again.", type: "error" })
-    }
-    // Fallback general error
-    else {
-      setToast({ message: "Transaction failed.", type: "error" })
+    const price = Number(fullProduct.priceEth)
+    if (!price || price <= 0) {
+      setToast({ message: "Invalid product price.", type: "error" })
+      return
     }
 
-  } finally {
-    setLoading(false)
+    try {
+      setLoading(true)
+      const provider = new BrowserProvider(window.ethereum as any)
+      const signer = await provider.getSigner()
+
+      const recipient = fullProduct.recipientAddress ?? "0x0000000000000000000000000000000000000000"
+      if (!recipient.startsWith("0x") || recipient.length !== 42) {
+        setToast({ message: "Invalid recipient address.", type: "error" })
+        setLoading(false)
+        return
+      }
+
+      const tx = await signer.sendTransaction({
+        to: recipient,
+        value: parseEther(String(price))
+      })
+
+      await tx.wait()
+      setToast({ message: "Transaction completed successfully.", type: "success" })
+    } catch (err: any) {
+      console.error("TX ERROR:", err)
+      if (err?.code === 4001) setToast({ message: "Transaction was cancelled.", type: "error" })
+      else if (err?.message?.toLowerCase().includes("insufficient")) setToast({ message: "Insufficient balance.", type: "error" })
+      else if (err?.message?.toLowerCase().includes("network")) setToast({ message: "Network error. Try again.", type: "error" })
+      else setToast({ message: "Transaction failed.", type: "error" })
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
+  const imageUrl = fullProduct.imageCid
+    ? `https://${GATEWAY_URL}/ipfs/${fullProduct.imageCid}`
+    : `https://source.unsplash.com/400x400/?coffee`
 
   return (
     <>
@@ -95,23 +167,27 @@ const handleBuy = async () => {
             exit={{ scale: 0.9, opacity: 0 }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">{product.name}</h2>
+              <h2 className="text-xl font-bold">{fullProduct.name}</h2>
               <button onClick={onClose} className="text-black hover:text-black/60 text-lg">✕</button>
             </div>
 
-            <img src={product.image} className="w-full h-48 object-cover rounded-lg mb-4" />
+            <img
+              src={imageUrl}
+              className="w-full h-48 object-cover rounded-lg mb-4"
+              alt={fullProduct.name}
+            />
 
             <div className="space-y-1 text-black">
-              <p><span className="font-semibold">Origin:</span> {product.origin}</p>
-              <p><span className="font-semibold">Process:</span> {product.process}</p>
-              <p><span className="font-semibold">Notes:</span> {product.notes}</p>
-              <p className="font-semibold mt-3 text-lg">{product.priceEth} ETH</p>
+              <p><span className="font-semibold">Origin:</span> {fullProduct.origin ?? "-"}</p>
+              <p><span className="font-semibold">Process:</span> {fullProduct.process ?? "-"}</p>
+              <p><span className="font-semibold">Description:</span> {fullProduct.description ?? "-"}</p>
+              <p className="font-semibold mt-3 text-lg">{fullProduct.priceEth ?? "-"} ETH</p>
             </div>
 
             <div className="mt-4 bg-gray-100 p-3 rounded-lg text-sm text-black">
-              <p><span className="font-semibold">Harvested:</span> {product.timeline.harvested}</p>
-              <p><span className="font-semibold">Roasted:</span> {product.timeline.roasted}</p>
-              <p><span className="font-semibold">Packed:</span> {product.timeline.packed}</p>
+              <p><span className="font-semibold">Harvested:</span> {fullProduct.timeline?.harvested ?? "-"}</p>
+              <p><span className="font-semibold">Roasted:</span> {fullProduct.timeline?.roasted ?? "-"}</p>
+              <p><span className="font-semibold">Packed:</span> {fullProduct.timeline?.packed ?? "-"}</p>
             </div>
 
             <button
