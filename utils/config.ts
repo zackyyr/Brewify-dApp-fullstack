@@ -2,30 +2,23 @@
 import { PinataSDK } from "pinata";
 
 export const pinata = new PinataSDK({
-  pinataJwt: process.env.PINATA_JWT,
-  pinataGateway: process.env.NEXT_PUBLIC_GATEWAY_URL,
+  pinataJwt: process.env.PINATA_JWT!,
+  pinataGateway: process.env.NEXT_PUBLIC_GATEWAY_URL!,
 });
 
-// Upload file
+// Upload FILE → return ipfs://CID
 export const uploadFileToIPFS = async (file: File) => {
-  const data = new FormData();
-  data.append("file", file);
-
-  // Upload menggunakan SDK Pinata
   const result = await pinata.upload.public.file(file);
-  // Convert CID ke public gateway URL
-  const url = await pinata.gateways.public.convert(result.cid);
-  return url;
+  return `ipfs://${result.cid}`;
 };
 
-// Upload JSON metadata (optional)
+// Upload JSON → return ipfs://CID
 export const uploadJSONToIPFS = async (jsonData: object) => {
-  try {
-    const result = await pinata.upload.public.json(jsonData);
-    const url = await pinata.gateways.public.convert(result.cid);
-    return url;
-  } catch (err) {
-    console.error("IPFS JSON Upload failed:", err);
-    throw err;
-  }
+  const result = await pinata.upload.public.json(jsonData);
+  return `ipfs://${result.cid}`;
+};
+
+// Convert CID → Public gateway URL (optional)
+export const toGatewayURL = (cid: string) => {
+  return `${process.env.NEXT_PUBLIC_GATEWAY_URL}/ipfs/${cid.replace("ipfs://", "")}`;
 };
