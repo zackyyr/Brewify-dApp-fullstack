@@ -4,6 +4,14 @@
 
 ---
 
+## Anggota Kelompok
+| Nama | NIM |
+|------|-----|
+| Muhamad Raechan Ulwan Zacky | F1D02310015 |
+| Ida Bagus Amanta Pradipa Krishna | F1D02310059 |
+| Muhammad Alfath Mavianza | F1D02310077 |
+
+---
 ## Fitur Utama
 1. **Mint Batch NFT**
    - Farmer dapat membuat batch kopi baru, upload gambar, dan mint NFT.
